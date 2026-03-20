@@ -1,10 +1,6 @@
 pipeline {
     agent any
 
-    tools {
-        sonarRunner 'SonarScanner'
-    }
-
     environment {
         DOCKER_IMAGE = "shankarduppala/sonar-docker-k8s"
         DEPLOYMENT = "dev"
@@ -34,14 +30,19 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                    bat "sonar-scanner"
+                    script {
+                        def scannerHome = tool 'SonarScanner'
+                        bat "${scannerHome}\\bin\\sonar-scanner.bat"
+                    }
                 }
             }
         }
 
         stage('Quality Gate') {
             steps {
-                waitForQualityGate abortPipeline: true
+                timeout(time: 5, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
             }
         }
 
@@ -62,7 +63,7 @@ pipeline {
                 )]) {
 
                     bat """
-                    echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
+                    docker login -u %DOCKER_USER% -p %DOCKER_PASS%
                     docker push %DOCKER_IMAGE%:%DEPLOYMENT%-%BUILD_NUMBER%
                     """
                 }
@@ -74,11 +75,21 @@ pipeline {
                 withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
 
                     bat """
+                    set KUBECONFIG=%KUBECONFIG%
                     kubectl apply -f k8s\\deployment.yaml
                     kubectl apply -f k8s\\service.yaml
                     """
                 }
             }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline completed successfully!"
+        }
+        failure {
+            echo "Pipeline failed. Check logs."
         }
     }
 }
