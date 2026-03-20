@@ -1,12 +1,9 @@
 pipeline {
     agent any
 
-    tools {
-        sonarQube 'SonarQube'
-    }
-
     environment {
         DOCKER_IMAGE = "shankarduppala/sonar-docker-k8s"
+        DEPLOYMENT = "dev"
     }
 
     stages {
@@ -33,9 +30,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                    bat """
-                    %SCANNER_HOME%\\bin\\sonar-scanner.bat
-                    """
+                    bat "%SCANNER_HOME%\\bin\\sonar-scanner.bat"
                 }
             }
         }
@@ -45,13 +40,15 @@ pipeline {
                 waitForQualityGate abortPipeline: true
             }
         }
+
         stage('Build Docker Image') {
             steps {
                 bat """
-                docker build --build-arg ENV=%DEPLOYMENT% -t %IMAGE_NAME%:%DEPLOYMENT%-%BUILD_NUMBER% .
+                docker build -t %DOCKER_IMAGE%:%DEPLOYMENT%-%BUILD_NUMBER% .
                 """
             }
         }
+
         stage('Push Docker Image') {
             steps {
                 withCredentials([usernamePassword(
@@ -59,19 +56,23 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
+
                     bat """
                     echo %DOCKER_PASS% | docker login -u %DOCKER_USER% --password-stdin
-                    docker push %IMAGE_NAME%:%DEPLOYMENT%-%BUILD_NUMBER%
+                    docker push %DOCKER_IMAGE%:%DEPLOYMENT%-%BUILD_NUMBER%
                     """
                 }
             }
         }
+
         stage('Deploy to Kubernetes') {
             steps {
-            withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
-                bat """
-                kubectl apply -f k8s\\service.yaml
-                """
+                withCredentials([file(credentialsId: 'kubeconfig', variable: 'KUBECONFIG')]) {
+
+                    bat """
+                    kubectl apply -f k8s\\deployment.yaml
+                    kubectl apply -f k8s\\service.yaml
+                    """
                 }
             }
         }
