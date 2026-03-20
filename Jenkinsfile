@@ -1,6 +1,10 @@
 pipeline {
     agent any
 
+    tools {
+    sonarScanner 'SonarScanner'
+    }
+
     environment {
         DOCKER_IMAGE = "shankarduppala/sonar-docker-k8s"
         DEPLOYMENT = "dev"
@@ -30,7 +34,7 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                    bat "%SCANNER_HOME%\\bin\\sonar-scanner.bat"
+                    bat "sonar-scanner"
                 }
             }
         }
