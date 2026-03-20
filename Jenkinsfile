@@ -13,12 +13,8 @@ pipeline {
 
         stage('Checkout Code') {
             steps {
-<<<<<<< HEAD
                 git branch: 'main',
                 url: 'https://github.com/shankarduppala/SonarQube.git'
-=======
-                git branch: 'main', url: 'https://github.com/shankarduppala/SonarQube.git'
->>>>>>> 614e3c292433a0112c5473acfeb6c48eadb561a9
             }
         }
 
