@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: sonar-docker-k8s
-        image: shankarduppala/sonar-docker-k8s:latest
+        image: shankarduppala/sonar-docker-k8s:dev-21
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
